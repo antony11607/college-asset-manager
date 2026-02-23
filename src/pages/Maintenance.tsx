@@ -1,12 +1,28 @@
 import { useState } from "react";
 import { MaintenanceRecord, initialMaintenance, initialAssets } from "@/data/mockData";
+import { toast } from "@/hooks/use-toast";
 
 export default function Maintenance() {
   const [records, setRecords] = useState<MaintenanceRecord[]>(initialMaintenance);
   const [form, setForm] = useState({ assetId: "", serviceDate: "", description: "" });
+  const [dateError, setDateError] = useState<string | undefined>();
+
+  const validateDate = (): boolean => {
+    const today = new Date().toISOString().split("T")[0];
+    if (form.serviceDate > today) {
+      setDateError("Service date cannot be in the future");
+      return false;
+    }
+    setDateError(undefined);
+    return true;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateDate()) {
+      toast({ title: "Validation Error", description: "Please fix the date error", variant: "destructive" });
+      return;
+    }
     const asset = initialAssets.find((a) => a.id === form.assetId);
     const newRecord: MaintenanceRecord = {
       id: `MNT-${String(records.length + 1).padStart(3, "0")}`,
@@ -17,6 +33,8 @@ export default function Maintenance() {
     };
     setRecords([newRecord, ...records]);
     setForm({ assetId: "", serviceDate: "", description: "" });
+    setDateError(undefined);
+    toast({ title: "Success", description: "Maintenance record added" });
   };
 
   return (
@@ -37,9 +55,10 @@ export default function Maintenance() {
               {initialAssets.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1">
             <label className="text-sm font-medium text-card-foreground">Service Date</label>
-            <input type="date" value={form.serviceDate} onChange={(e) => setForm({ ...form, serviceDate: e.target.value })} required className="w-full px-4 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+            <input type="date" value={form.serviceDate} max={new Date().toISOString().split("T")[0]} onChange={(e) => { setForm({ ...form, serviceDate: e.target.value }); setDateError(undefined); }} required className={`w-full px-4 py-2.5 rounded-lg border ${dateError ? 'border-destructive' : 'border-input'} bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring`} />
+            {dateError && <p className="text-xs text-destructive">{dateError}</p>}
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-card-foreground">Description</label>
