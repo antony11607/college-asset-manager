@@ -55,5 +55,12 @@ export const users = [
   "Student - Amit R.",
   "Lab Assistant - Sunil",
 ];
+export interface AssetRequest {
+  id: string;
+  user_id: string;
+  asset_id: string;
+  quantity: number;
+  status: "pending" | "approved" | "rejected";
+}
 
 export const categories = ["Laptop", "Projector", "Printer", "Network Switch", "Lab Equipment", "Camera", "Monitor", "Furniture", "Other"];
