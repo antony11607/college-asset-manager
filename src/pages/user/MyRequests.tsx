@@ -1,62 +1,29 @@
 import { useState, useEffect } from "react";
-import { CheckCircle2, XCircle, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { getRequestsAPI } from "@/services/api";
+import { AssetRequest } from "@/types/index";
 import { toast } from "@/hooks/use-toast";
-
-// Mock data for development - replace with API calls filtered by user
-const mockUserRequests: AssetRequest[] = [
-  {
-    id: "REQ-001",
-    userId: "USR-001",
-    userName: "Rahul Kumar",
-    assetId: "AST-001",
-    assetName: "Dell Latitude 5520",
-    quantity: 1,
-    status: "pending",
-    requestDate: "2025-03-18",
-    reason: "Project work"
-  },
-  {
-    id: "REQ-003",
-    userId: "USR-001",
-    userName: "Rahul Kumar",
-    assetId: "AST-006",
-    assetName: "Oscilloscope DSO1102E",
-    quantity: 1,
-    status: "approved",
-    requestDate: "2025-03-15",
-    reason: "Lab experiment"
-  },
-];
 
 export default function MyRequests() {
   const { user } = useAuth();
-  const [requests, setRequests] = useState<AssetRequest[]>(mockUserRequests);
-  const [loading, setLoading] = useState(false);
+  const [requests, setRequests] = useState<AssetRequest[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserRequests = async () => {
       try {
         setLoading(true);
-        // In production, filter by actual user ID
-        // const data = await getRequestsAPI(user?.email);
-        setRequests(mockUserRequests);
+        const data = await getRequestsAPI(user?.email);
+        setRequests(data);
       } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch requests",
-          variant: "destructive",
-        });
+        toast({ title: "Error", description: "Failed to fetch requests", variant: "destructive" });
         console.error("Fetch error:", error);
       } finally {
         setLoading(false);
       }
     };
-
-    if (user) {
-      fetchUserRequests();
-    }
+    if (user) fetchUserRequests();
   }, [user]);
 
   const statusIcons: Record<string, React.ReactNode> = {
@@ -75,6 +42,14 @@ export default function MyRequests() {
   const approvedCount = requests.filter(r => r.status === "approved").length;
   const rejectedCount = requests.filter(r => r.status === "rejected").length;
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -82,7 +57,6 @@ export default function MyRequests() {
         <p className="text-muted-foreground text-sm mt-1">Track your asset requests and their status</p>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-card rounded-xl card-shadow-md border border-border/50 p-5">
           <div className="flex items-start justify-between">
@@ -113,7 +87,6 @@ export default function MyRequests() {
         </div>
       </div>
 
-      {/* Requests Table */}
       <div className="bg-card rounded-xl card-shadow-md border border-border/50 overflow-hidden">
         <div className="px-5 py-4 border-b border-border">
           <h2 className="font-semibold text-card-foreground">Request History</h2>
@@ -157,7 +130,6 @@ export default function MyRequests() {
         )}
       </div>
 
-      {/* Status Legend */}
       <div className="bg-muted/30 rounded-xl border border-border/50 p-4">
         <h3 className="font-semibold text-card-foreground mb-3 text-sm">Status Guide</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">

@@ -1,7 +1,10 @@
-import { initialAssets, initialAllocations, initialMaintenance } from "@/data/mockData";
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { Asset, Allocation, MaintenanceRecord } from "@/types/index";
+import { getAssetsAPI, getAllocationsAPI, getMaintenanceAPI } from "@/services/api";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, AreaChart, Area, LineChart, Line,
+  PieChart, Pie, Cell, Legend, LineChart, Line,
 } from "recharts";
 
 const CHART_COLORS = [
@@ -12,36 +15,56 @@ const CHART_COLORS = [
   "hsl(0, 72%, 51%)",
 ];
 
-const statusData = [
-  { name: "Available", value: initialAssets.filter((a) => a.status === "Available").length },
-  { name: "Allocated", value: initialAssets.filter((a) => a.status === "Allocated").length },
-  { name: "Maintenance", value: initialAssets.filter((a) => a.status === "Maintenance").length },
-];
-
-const categoryData = Object.entries(
-  initialAssets.reduce<Record<string, number>>((acc, a) => {
-    acc[a.category] = (acc[a.category] || 0) + 1;
-    return acc;
-  }, {})
-).map(([name, value]) => ({ name, value }));
-
-const locationData = Object.entries(
-  initialAssets.reduce<Record<string, number>>((acc, a) => {
-    acc[a.location] = (acc[a.location] || 0) + 1;
-    return acc;
-  }, {})
-).map(([name, value]) => ({ name, value }));
-
-const monthlyTrend = [
-  { month: "Sep", assets: 4, allocations: 2, maintenance: 0 },
-  { month: "Oct", assets: 5, allocations: 1, maintenance: 1 },
-  { month: "Nov", assets: 6, allocations: 3, maintenance: 0 },
-  { month: "Dec", assets: 6, allocations: 2, maintenance: 1 },
-  { month: "Jan", assets: 8, allocations: 4, maintenance: 2 },
-  { month: "Feb", assets: 8, allocations: 3, maintenance: 1 },
-];
-
 export default function Reports() {
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [allocations, setAllocations] = useState<Allocation[]>([]);
+  const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [a, al, m] = await Promise.all([getAssetsAPI(), getAllocationsAPI(), getMaintenanceAPI()]);
+        setAssets(a);
+        setAllocations(al);
+        setMaintenance(m);
+      } catch (error) {
+        console.error("Reports fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const statusData = [
+    { name: "Available", value: assets.filter((a) => a.status === "Available").length },
+    { name: "Allocated", value: assets.filter((a) => a.status === "Allocated").length },
+    { name: "Maintenance", value: assets.filter((a) => a.status === "Maintenance").length },
+  ];
+
+  const categoryData = Object.entries(
+    assets.reduce<Record<string, number>>((acc, a) => {
+      acc[a.category] = (acc[a.category] || 0) + 1;
+      return acc;
+    }, {})
+  ).map(([name, value]) => ({ name, value }));
+
+  const locationData = Object.entries(
+    assets.reduce<Record<string, number>>((acc, a) => {
+      acc[a.location] = (acc[a.location] || 0) + 1;
+      return acc;
+    }, {})
+  ).map(([name, value]) => ({ name, value }));
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -49,24 +72,22 @@ export default function Reports() {
         <p className="text-muted-foreground text-sm mt-1">Comprehensive asset management insights</p>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-card rounded-xl card-shadow-md border border-border/50 p-5 text-center">
-          <p className="text-3xl font-bold text-primary">{initialAssets.length}</p>
+          <p className="text-3xl font-bold text-primary">{assets.length}</p>
           <p className="text-sm text-muted-foreground mt-1">Total Assets</p>
         </div>
         <div className="bg-card rounded-xl card-shadow-md border border-border/50 p-5 text-center">
-          <p className="text-3xl font-bold text-primary">{initialAllocations.length}</p>
+          <p className="text-3xl font-bold text-primary">{allocations.length}</p>
           <p className="text-sm text-muted-foreground mt-1">Active Allocations</p>
         </div>
         <div className="bg-card rounded-xl card-shadow-md border border-border/50 p-5 text-center">
-          <p className="text-3xl font-bold text-primary">{initialMaintenance.length}</p>
+          <p className="text-3xl font-bold text-primary">{maintenance.length}</p>
           <p className="text-sm text-muted-foreground mt-1">Maintenance Records</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Status Pie */}
         <div className="bg-card rounded-xl card-shadow-md border border-border/50 p-5">
           <h2 className="font-semibold text-card-foreground mb-4">Asset Status Distribution</h2>
           <ResponsiveContainer width="100%" height={260}>
@@ -80,7 +101,6 @@ export default function Reports() {
           </ResponsiveContainer>
         </div>
 
-        {/* Category Bar */}
         <div className="bg-card rounded-xl card-shadow-md border border-border/50 p-5">
           <h2 className="font-semibold text-card-foreground mb-4">Assets by Category</h2>
           <ResponsiveContainer width="100%" height={260}>
@@ -94,24 +114,6 @@ export default function Reports() {
           </ResponsiveContainer>
         </div>
 
-        {/* Monthly Trend */}
-        <div className="bg-card rounded-xl card-shadow-md border border-border/50 p-5">
-          <h2 className="font-semibold text-card-foreground mb-4">Monthly Overview</h2>
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={monthlyTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 20%, 90%)" />
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: "hsl(215, 15%, 50%)" }} />
-              <YAxis tick={{ fontSize: 12, fill: "hsl(215, 15%, 50%)" }} allowDecimals={false} />
-              <Tooltip contentStyle={{ borderRadius: "0.5rem", border: "1px solid hsl(214, 20%, 90%)", fontSize: 12 }} />
-              <Line type="monotone" dataKey="assets" stroke={CHART_COLORS[0]} strokeWidth={2} name="Total Assets" />
-              <Line type="monotone" dataKey="allocations" stroke={CHART_COLORS[1]} strokeWidth={2} name="Allocations" />
-              <Line type="monotone" dataKey="maintenance" stroke={CHART_COLORS[2]} strokeWidth={2} name="Maintenance" />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Location Distribution */}
         <div className="bg-card rounded-xl card-shadow-md border border-border/50 p-5">
           <h2 className="font-semibold text-card-foreground mb-4">Assets by Location</h2>
           <ResponsiveContainer width="100%" height={260}>
