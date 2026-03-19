@@ -13,9 +13,11 @@ import Assets from "./pages/Assets";
 import Allocation from "./pages/Allocation";
 import Maintenance from "./pages/Maintenance";
 import Reports from "./pages/admin/Reports";
+import Requests from "./pages/admin/Requests";
 import UserDashboard from "./pages/user/UserDashboard";
 import MyAllocations from "./pages/user/MyAllocations";
 import RequestAsset from "./pages/user/RequestAsset";
+import MyRequests from "./pages/user/MyRequests";
 import UserMaintenance from "./pages/user/UserMaintenance";
 import Profile from "./pages/user/Profile";
 import NotFound from "./pages/NotFound";
@@ -38,6 +40,7 @@ const App = () => (
               <Route path="/admin/dashboard" element={<Dashboard />} />
               <Route path="/admin/assets" element={<Assets />} />
               <Route path="/admin/allocation" element={<Allocation />} />
+              <Route path="/admin/requests" element={<Requests />} />
               <Route path="/admin/maintenance" element={<Maintenance />} />
               <Route path="/admin/reports" element={<Reports />} />
             </Route>
@@ -47,6 +50,7 @@ const App = () => (
               <Route path="/user/dashboard" element={<UserDashboard />} />
               <Route path="/user/allocations" element={<MyAllocations />} />
               <Route path="/user/request" element={<RequestAsset />} />
+              <Route path="/user/my-requests" element={<MyRequests />} />
               <Route path="/user/maintenance" element={<UserMaintenance />} />
               <Route path="/user/profile" element={<Profile />} />
             </Route>

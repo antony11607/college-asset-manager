@@ -1,4 +1,4 @@
-import { LayoutDashboard, Package, ArrowRightLeft, Wrench, LogOut, GraduationCap, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Package, ArrowRightLeft, Wrench, LogOut, GraduationCap, BarChart3, ClipboardList } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -7,6 +7,7 @@ const navItems = [
   { title: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
   { title: "Assets", path: "/admin/assets", icon: Package },
   { title: "Allocation", path: "/admin/allocation", icon: ArrowRightLeft },
+  { title: "Requests", path: "/admin/requests", icon: ClipboardList },
   { title: "Maintenance", path: "/admin/maintenance", icon: Wrench },
   { title: "Reports", path: "/admin/reports", icon: BarChart3 },
 ];

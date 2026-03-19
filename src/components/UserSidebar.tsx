@@ -1,4 +1,4 @@
-import { LayoutDashboard, Package, Send, Wrench, LogOut, GraduationCap, User } from "lucide-react";
+import { LayoutDashboard, Package, Send, Wrench, LogOut, GraduationCap, User, ClipboardList } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -7,6 +7,7 @@ const navItems = [
   { title: "Dashboard", path: "/user/dashboard", icon: LayoutDashboard },
   { title: "My Allocations", path: "/user/allocations", icon: Package },
   { title: "Request Asset", path: "/user/request", icon: Send },
+  { title: "My Requests", path: "/user/my-requests", icon: ClipboardList },
   { title: "Maintenance Requests", path: "/user/maintenance", icon: Wrench },
   { title: "Profile", path: "/user/profile", icon: User },
 ];
