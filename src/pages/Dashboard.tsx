@@ -1,59 +1,78 @@
-import { Package, CheckCircle, ArrowRightLeft, Wrench, TrendingUp, TrendingDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Package, CheckCircle, ArrowRightLeft, Wrench, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
-import { initialAssets, initialAllocations, initialMaintenance } from "@/data/mockData";
+import { Asset, Allocation, MaintenanceRecord, MonthlyActivity, AllocationTrend } from "@/types/index";
+import { getAssetsAPI, getAllocationsAPI, getMaintenanceAPI, getMonthlyActivityAPI, getAllocationTrendAPI } from "@/services/api";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, LineChart, Line, AreaChart, Area,
+  PieChart, Pie, Cell, Legend, AreaChart, Area,
 } from "recharts";
 
 const CHART_COLORS = [
-  "hsl(217, 91%, 50%)",   // primary blue
-  "hsl(142, 71%, 45%)",   // success green
-  "hsl(38, 92%, 50%)",    // warning orange
-  "hsl(199, 89%, 48%)",   // info cyan
-  "hsl(0, 72%, 51%)",     // destructive red
-];
-
-// Category distribution
-const categoryData = Object.entries(
-  initialAssets.reduce<Record<string, number>>((acc, a) => {
-    acc[a.category] = (acc[a.category] || 0) + 1;
-    return acc;
-  }, {})
-).map(([name, value]) => ({ name, value }));
-
-// Status distribution for pie chart
-const statusData = [
-  { name: "Available", value: initialAssets.filter((a) => a.status === "Available").length },
-  { name: "Allocated", value: initialAssets.filter((a) => a.status === "Allocated").length },
-  { name: "Maintenance", value: initialAssets.filter((a) => a.status === "Maintenance").length },
-];
-
-// Monthly asset activity (mock trend data)
-const monthlyActivity = [
-  { month: "Sep", added: 1, removed: 0, maintenance: 0 },
-  { month: "Oct", added: 0, removed: 0, maintenance: 1 },
-  { month: "Nov", added: 2, removed: 1, maintenance: 0 },
-  { month: "Dec", added: 0, removed: 0, maintenance: 1 },
-  { month: "Jan", added: 3, removed: 1, maintenance: 2 },
-  { month: "Feb", added: 1, removed: 0, maintenance: 1 },
-];
-
-// Allocation trend
-const allocationTrend = [
-  { month: "Sep", allocations: 2 },
-  { month: "Oct", allocations: 1 },
-  { month: "Nov", allocations: 3 },
-  { month: "Dec", allocations: 2 },
-  { month: "Jan", allocations: 4 },
-  { month: "Feb", allocations: 3 },
+  "hsl(217, 91%, 50%)",
+  "hsl(142, 71%, 45%)",
+  "hsl(38, 92%, 50%)",
+  "hsl(199, 89%, 48%)",
+  "hsl(0, 72%, 51%)",
 ];
 
 export default function Dashboard() {
-  const total = initialAssets.length;
-  const available = initialAssets.filter((a) => a.status === "Available").length;
-  const allocated = initialAssets.filter((a) => a.status === "Allocated").length;
-  const maintenance = initialAssets.filter((a) => a.status === "Maintenance").length;
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [allocations, setAllocations] = useState<Allocation[]>([]);
+  const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
+  const [monthlyActivity, setMonthlyActivity] = useState<MonthlyActivity[]>([]);
+  const [allocationTrend, setAllocationTrend] = useState<AllocationTrend[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const [assetsData, allocData, maintData, activityData, trendData] = await Promise.all([
+          getAssetsAPI(),
+          getAllocationsAPI(),
+          getMaintenanceAPI(),
+          getMonthlyActivityAPI(),
+          getAllocationTrendAPI(),
+        ]);
+        setAssets(assetsData);
+        setAllocations(allocData);
+        setMaintenance(maintData);
+        setMonthlyActivity(activityData);
+        setAllocationTrend(trendData);
+      } catch (error) {
+        console.error("Dashboard fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAll();
+  }, []);
+
+  const total = assets.length;
+  const available = assets.filter((a) => a.status === "Available").length;
+  const allocated = assets.filter((a) => a.status === "Allocated").length;
+  const maintenanceCount = assets.filter((a) => a.status === "Maintenance").length;
+
+  const statusData = [
+    { name: "Available", value: available },
+    { name: "Allocated", value: allocated },
+    { name: "Maintenance", value: maintenanceCount },
+  ];
+
+  const categoryData = Object.entries(
+    assets.reduce<Record<string, number>>((acc, a) => {
+      acc[a.category] = (acc[a.category] || 0) + 1;
+      return acc;
+    }, {})
+  ).map(([name, value]) => ({ name, value }));
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -66,12 +85,10 @@ export default function Dashboard() {
         <StatCard title="Total Assets" value={total} icon={Package} color="primary" />
         <StatCard title="Available" value={available} icon={CheckCircle} color="success" />
         <StatCard title="Allocated" value={allocated} icon={ArrowRightLeft} color="info" />
-        <StatCard title="Under Maintenance" value={maintenance} icon={Wrench} color="warning" />
+        <StatCard title="Under Maintenance" value={maintenanceCount} icon={Wrench} color="warning" />
       </div>
 
-      {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Assets Added vs Removed */}
         <div className="bg-card rounded-xl card-shadow-md border border-border/50 p-5">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-5 h-5 text-primary" />
@@ -90,15 +107,12 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Asset Status Pie */}
         <div className="bg-card rounded-xl card-shadow-md border border-border/50 p-5">
           <h2 className="font-semibold text-card-foreground mb-4">Asset Status Distribution</h2>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
               <Pie data={statusData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={4} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-                {statusData.map((_, i) => (
-                  <Cell key={i} fill={CHART_COLORS[i]} />
-                ))}
+                {statusData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i]} />)}
               </Pie>
               <Tooltip contentStyle={{ borderRadius: "0.5rem", border: "1px solid hsl(214, 20%, 90%)", fontSize: 12 }} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -107,9 +121,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Category Distribution */}
         <div className="bg-card rounded-xl card-shadow-md border border-border/50 p-5">
           <h2 className="font-semibold text-card-foreground mb-4">Assets by Category</h2>
           <ResponsiveContainer width="100%" height={260}>
@@ -123,7 +135,6 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Allocation Trend */}
         <div className="bg-card rounded-xl card-shadow-md border border-border/50 p-5">
           <div className="flex items-center gap-2 mb-4">
             <TrendingDown className="w-5 h-5 text-info" />
@@ -141,9 +152,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Recent Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Allocations */}
         <div className="bg-card rounded-xl card-shadow-md border border-border/50 overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
             <h2 className="font-semibold text-card-foreground">Recent Allocations</h2>
@@ -158,7 +167,9 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {initialAllocations.map((a) => (
+                {allocations.length === 0 ? (
+                  <tr><td colSpan={3} className="px-5 py-8 text-center text-muted-foreground">No allocations yet</td></tr>
+                ) : allocations.slice(0, 5).map((a) => (
                   <tr key={a.id} className="border-b border-border/50 last:border-0">
                     <td className="px-5 py-3 text-card-foreground">{a.assetName}</td>
                     <td className="px-5 py-3 text-card-foreground">{a.userName}</td>
@@ -170,7 +181,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Recent Maintenance */}
         <div className="bg-card rounded-xl card-shadow-md border border-border/50 overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
             <h2 className="font-semibold text-card-foreground">Recent Maintenance</h2>
@@ -185,7 +195,9 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {initialMaintenance.map((m) => (
+                {maintenance.length === 0 ? (
+                  <tr><td colSpan={3} className="px-5 py-8 text-center text-muted-foreground">No maintenance records yet</td></tr>
+                ) : maintenance.slice(0, 5).map((m) => (
                   <tr key={m.id} className="border-b border-border/50 last:border-0">
                     <td className="px-5 py-3 text-card-foreground">{m.assetName}</td>
                     <td className="px-5 py-3 text-muted-foreground">{m.serviceDate}</td>

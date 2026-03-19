@@ -1,5 +1,8 @@
-import { useState } from "react";
-import { initialAllocations, initialAssets } from "@/data/mockData";
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { Asset, Allocation } from "@/types/index";
+import { getAssetsAPI, getAllocationsAPI, addMaintenanceAPI } from "@/services/api";
 import { toast } from "@/hooks/use-toast";
 
 interface MaintenanceRequest {
@@ -10,31 +13,46 @@ interface MaintenanceRequest {
   status: string;
 }
 
-// User can only request maintenance for their allocated assets
-const myAssetIds = initialAllocations
-  .filter((a) => a.userName === "Student - Rahul K.")
-  .map((a) => a.assetId);
-const myAssets = initialAssets.filter((a) => myAssetIds.includes(a.id));
-
 export default function UserMaintenance() {
-  const [requests, setRequests] = useState<MaintenanceRequest[]>([
-    { id: "MR-001", assetName: "BenQ GW2780", description: "Screen flickering issue", date: "2025-02-20", status: "In Progress" },
-  ]);
+  const { user } = useAuth();
+  const [myAssets, setMyAssets] = useState<Asset[]>([]);
+  const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ assetId: "", description: "" });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const asset = initialAssets.find((a) => a.id === form.assetId);
-    const newReq: MaintenanceRequest = {
-      id: `MR-${String(requests.length + 1).padStart(3, "0")}`,
-      assetName: asset?.name || "",
-      description: form.description,
-      date: new Date().toISOString().split("T")[0],
-      status: "Pending",
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [allAssets, allocations] = await Promise.all([
+          getAssetsAPI(),
+          getAllocationsAPI(user?.email),
+        ]);
+        const myAssetIds = allocations.map((a: Allocation) => a.assetId);
+        setMyAssets(allAssets.filter((a: Asset) => myAssetIds.includes(a.id)));
+      } catch (error) {
+        console.error("Fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
     };
-    setRequests([newReq, ...requests]);
-    setForm({ assetId: "", description: "" });
-    toast({ title: "Success", description: "Maintenance request submitted" });
+    if (user) fetchData();
+  }, [user]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const asset = myAssets.find((a) => a.id === form.assetId);
+    try {
+      await addMaintenanceAPI({
+        assetId: form.assetId,
+        assetName: asset?.name || "",
+        serviceDate: new Date().toISOString().split("T")[0],
+        description: form.description,
+      });
+      setForm({ assetId: "", description: "" });
+      toast({ title: "Success", description: "Maintenance request submitted" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to submit request", variant: "destructive" });
+    }
   };
 
   const statusColors: Record<string, string> = {
@@ -42,6 +60,14 @@ export default function UserMaintenance() {
     "In Progress": "bg-info/10 text-info",
     Completed: "bg-success/10 text-success",
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -68,38 +94,6 @@ export default function UserMaintenance() {
             Submit
           </button>
         </form>
-      </div>
-
-      <div className="bg-card rounded-xl card-shadow-md border border-border/50 overflow-hidden">
-        <div className="px-5 py-4 border-b border-border">
-          <h2 className="font-semibold text-card-foreground">My Maintenance Requests</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="text-left px-5 py-3 font-medium text-muted-foreground">ID</th>
-                <th className="text-left px-5 py-3 font-medium text-muted-foreground">Asset</th>
-                <th className="text-left px-5 py-3 font-medium text-muted-foreground">Description</th>
-                <th className="text-left px-5 py-3 font-medium text-muted-foreground">Date</th>
-                <th className="text-left px-5 py-3 font-medium text-muted-foreground">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {requests.map((r) => (
-                <tr key={r.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
-                  <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{r.id}</td>
-                  <td className="px-5 py-3 font-medium text-card-foreground">{r.assetName}</td>
-                  <td className="px-5 py-3 text-muted-foreground">{r.description}</td>
-                  <td className="px-5 py-3 text-muted-foreground">{r.date}</td>
-                  <td className="px-5 py-3">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[r.status]}`}>{r.status}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   );

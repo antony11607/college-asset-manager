@@ -1,6 +1,9 @@
-import { useState } from "react";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
-import { Asset, initialAssets, categories } from "@/data/mockData";
+import { useState, useEffect } from "react";
+import { Plus, Pencil, Trash2, X, Loader2 } from "lucide-react";
+import { Asset } from "@/types/index";
+import { categories } from "@/data/mockData";
+import { getAssetsAPI, addAssetAPI, updateAssetAPI, deleteAssetAPI } from "@/services/api";
+import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 const statusColors: Record<string, string> = {
@@ -10,10 +13,25 @@ const statusColors: Record<string, string> = {
 };
 
 export default function Assets() {
-  const [assets, setAssets] = useState<Asset[]>(initialAssets);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [form, setForm] = useState({ name: "", category: "", purchaseDate: "", status: "Available" as Asset["status"], location: "" });
+
+  useEffect(() => {
+    const fetchAssets = async () => {
+      try {
+        const data = await getAssetsAPI();
+        setAssets(data);
+      } catch (error) {
+        console.error("Fetch assets error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAssets();
+  }, []);
 
   const openAdd = () => {
     setEditingAsset(null);
@@ -27,20 +45,41 @@ export default function Assets() {
     setModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingAsset) {
-      setAssets(assets.map((a) => (a.id === editingAsset.id ? { ...a, ...form } : a)));
-    } else {
-      const newId = `AST-${String(assets.length + 1).padStart(3, "0")}`;
-      setAssets([...assets, { id: newId, ...form }]);
+    try {
+      if (editingAsset) {
+        const updated = await updateAssetAPI({ ...editingAsset, ...form });
+        setAssets(assets.map((a) => (a.id === editingAsset.id ? updated : a)));
+        toast({ title: "Success", description: "Asset updated" });
+      } else {
+        const created = await addAssetAPI(form);
+        setAssets([...assets, created]);
+        toast({ title: "Success", description: "Asset added" });
+      }
+      setModalOpen(false);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save asset", variant: "destructive" });
     }
-    setModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setAssets(assets.filter((a) => a.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteAssetAPI(id);
+      setAssets(assets.filter((a) => a.id !== id));
+      toast({ title: "Success", description: "Asset deleted" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete asset", variant: "destructive" });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -70,7 +109,9 @@ export default function Assets() {
               </tr>
             </thead>
             <tbody>
-              {assets.map((asset) => (
+              {assets.length === 0 ? (
+                <tr><td colSpan={7} className="px-5 py-8 text-center text-muted-foreground">No assets found</td></tr>
+              ) : assets.map((asset) => (
                 <tr key={asset.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
                   <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{asset.id}</td>
                   <td className="px-5 py-3 font-medium text-card-foreground">{asset.name}</td>
@@ -99,7 +140,6 @@ export default function Assets() {
         </div>
       </div>
 
-      {/* Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setModalOpen(false)} />
@@ -110,7 +150,6 @@ export default function Assets() {
                 <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
-
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-card-foreground">Asset Name</label>

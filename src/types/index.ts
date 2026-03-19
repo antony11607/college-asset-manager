@@ -5,6 +5,7 @@ export interface Asset {
   purchaseDate: string;
   status: "Available" | "Allocated" | "Maintenance";
   location: string;
+  quantity?: number;
 }
 
 export interface Allocation {
@@ -37,8 +38,27 @@ export interface AssetRequest {
   asset_id: string;
   quantity: number;
   status: "pending" | "approved" | "rejected";
-  userName?: string; // Optional for display purposes
-  assetName?: string; // Optional for display purposes
-  requestDate?: string; // Optional for display purposes
-  reason?: string; // Optional for display purposes
+  userName: string;
+  assetName: string;
+  requestDate: string;
+  reason?: string;
+}
+
+export interface DashboardStats {
+  totalAssets: number;
+  available: number;
+  allocated: number;
+  maintenance: number;
+}
+
+export interface MonthlyActivity {
+  month: string;
+  added: number;
+  removed: number;
+  maintenance: number;
+}
+
+export interface AllocationTrend {
+  month: string;
+  allocations: number;
 }

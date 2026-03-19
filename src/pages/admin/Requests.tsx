@@ -1,100 +1,46 @@
 import { useState, useEffect, useRef } from "react";
-import { CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
-import { AssetRequest } from "@/data/mockData";
-import { approveRequestAPI, rejectRequestAPI, getRequestsAPI } from "@/services/api";   
+import { CheckCircle2, XCircle, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { AssetRequest } from "@/types/index";
+import { approveRequestAPI, rejectRequestAPI, getRequestsAPI } from "@/services/api";
 import { toast } from "@/hooks/use-toast";
 
-// Mock data for development - replace with API calls
-const mockRequests: AssetRequest[] = [
-  {
-    id: "REQ-001",
-    userId: "USR-001",
-    userName: "Rahul Kumar",
-    assetId: "AST-001",
-    assetName: "Dell Latitude 5520",
-    quantity: 1,
-    status: "pending",
-    requestDate: "2025-03-18",
-    reason: "Project work"
-  },
-  {
-    id: "REQ-002",
-    userId: "USR-002",
-    userName: "Priya Singh",
-    assetId: "AST-007",
-    assetName: "Canon EOS R50",
-    quantity: 2,
-    status: "pending",
-    requestDate: "2025-03-19",
-    reason: "Event photography"
-  },
-];
-
 export default function AssetRequests() {
-  const [requests, setRequests] = useState<AssetRequest[]>(mockRequests);
-  const [loading, setLoading] = useState(false);
+  const [requests, setRequests] = useState<AssetRequest[]>([]);
+  const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
-  const lastCountRef = useRef(mockRequests.length);
+  const lastCountRef = useRef(0);
 
-  // Polling for new requests
-  useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        // For now, using mock data. Replace with: const data = await getRequestsAPI();
-        // This would be the actual API call
-        setRequests(mockRequests);
-        
-        // Check for new requests
-        const newCount = mockRequests.length;
-        if (newCount > lastCountRef.current) {
-          const newRequests = mockRequests.slice(0, newCount - lastCountRef.current);
-          newRequests.forEach(req => {
-            toast({
-              title: "New Asset Request",
-              description: `New Asset Request from ${req.userName}`,
-            });
-          });
-          lastCountRef.current = newCount;
-        }
-      } catch (error) {
-        console.error("Error fetching requests:", error);
+  const fetchRequests = async (showToast = true) => {
+    try {
+      const data = await getRequestsAPI();
+      setRequests(data);
+      if (showToast && data.length > lastCountRef.current && lastCountRef.current > 0) {
+        toast({ title: "New Asset Request", description: `${data.length - lastCountRef.current} new request(s) received` });
       }
-    };
+      lastCountRef.current = data.length;
+    } catch (error) {
+      console.error("Error fetching requests:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Initial fetch
-    fetchRequests();
-
-    // Setup polling - check every 5 seconds
-    pollingRef.current = setInterval(fetchRequests, 5000);
-
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
+  useEffect(() => {
+    fetchRequests(false);
+    pollingRef.current = setInterval(() => fetchRequests(true), 5000);
+    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
   }, []);
 
   const handleApprove = async (requestId: string, request: AssetRequest) => {
     setApproving(requestId);
     try {
-      // Call API: await approveRequestAPI({ request_id: requestId });
-      
-      // Update local state
-      setRequests(requests.map(r => 
-        r.id === requestId ? { ...r, status: "approved" as const } : r
-      ));
-      
-      toast({
-        title: "Request Approved",
-        description: `${request.assetName} approved for ${request.userName}`,
-      });
+      await approveRequestAPI({ request_id: requestId });
+      setRequests(requests.map(r => r.id === requestId ? { ...r, status: "approved" as const } : r));
+      toast({ title: "Request Approved", description: `${request.assetName} approved for ${request.userName}` });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to approve request",
-        variant: "destructive",
-      });
-      console.error("Approve error:", error);
+      toast({ title: "Error", description: "Failed to approve request", variant: "destructive" });
     } finally {
       setApproving(null);
     }
@@ -103,24 +49,11 @@ export default function AssetRequests() {
   const handleReject = async (requestId: string, request: AssetRequest) => {
     setRejecting(requestId);
     try {
-      // Call API: await rejectRequestAPI({ request_id: requestId });
-      
-      // Update local state
-      setRequests(requests.map(r => 
-        r.id === requestId ? { ...r, status: "rejected" as const } : r
-      ));
-      
-      toast({
-        title: "Request Rejected",
-        description: `${request.assetName} request from ${request.userName} has been rejected`,
-      });
+      await rejectRequestAPI({ request_id: requestId });
+      setRequests(requests.map(r => r.id === requestId ? { ...r, status: "rejected" as const } : r));
+      toast({ title: "Request Rejected", description: `${request.assetName} request from ${request.userName} has been rejected` });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to reject request",
-        variant: "destructive",
-      });
-      console.error("Reject error:", error);
+      toast({ title: "Error", description: "Failed to reject request", variant: "destructive" });
     } finally {
       setRejecting(null);
     }
@@ -141,6 +74,14 @@ export default function AssetRequests() {
   const pendingRequests = requests.filter(r => r.status === "pending");
   const processedRequests = requests.filter(r => r.status !== "pending");
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -148,7 +89,6 @@ export default function AssetRequests() {
         <p className="text-muted-foreground text-sm mt-1">Manage and approve asset requests from users</p>
       </div>
 
-      {/* Pending Requests */}
       <div className="bg-card rounded-xl card-shadow-md border border-border/50 overflow-hidden">
         <div className="px-5 py-4 border-b border-border bg-warning/5">
           <div className="flex items-center gap-2">
@@ -185,18 +125,10 @@ export default function AssetRequests() {
                     <td className="px-5 py-3 text-muted-foreground text-xs">{r.reason || "-"}</td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleApprove(r.id, r)}
-                          disabled={approving === r.id}
-                          className="px-3 py-1.5 rounded-lg bg-success text-success-foreground text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
+                        <button onClick={() => handleApprove(r.id, r)} disabled={approving === r.id} className="px-3 py-1.5 rounded-lg bg-success text-success-foreground text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
                           {approving === r.id ? "Approving..." : "Approve"}
                         </button>
-                        <button
-                          onClick={() => handleReject(r.id, r)}
-                          disabled={rejecting === r.id}
-                          className="px-3 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
+                        <button onClick={() => handleReject(r.id, r)} disabled={rejecting === r.id} className="px-3 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
                           {rejecting === r.id ? "Rejecting..." : "Reject"}
                         </button>
                       </div>
@@ -209,7 +141,6 @@ export default function AssetRequests() {
         )}
       </div>
 
-      {/* Processed Requests */}
       {processedRequests.length > 0 && (
         <div className="bg-card rounded-xl card-shadow-md border border-border/50 overflow-hidden">
           <div className="px-5 py-4 border-b border-border">

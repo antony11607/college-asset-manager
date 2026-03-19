@@ -1,8 +1,36 @@
-import { initialAllocations } from "@/data/mockData";
-
-const myAllocations = initialAllocations.filter((a) => a.userName === "Student - Rahul K.");
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { Allocation } from "@/types/index";
+import { getAllocationsAPI } from "@/services/api";
 
 export default function MyAllocations() {
+  const { user } = useAuth();
+  const [allocations, setAllocations] = useState<Allocation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAllocations = async () => {
+      try {
+        const data = await getAllocationsAPI(user?.email);
+        setAllocations(data);
+      } catch (error) {
+        console.error("Fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (user) fetchAllocations();
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -22,9 +50,9 @@ export default function MyAllocations() {
               </tr>
             </thead>
             <tbody>
-              {myAllocations.length === 0 ? (
+              {allocations.length === 0 ? (
                 <tr><td colSpan={4} className="px-5 py-8 text-center text-muted-foreground">No allocations found</td></tr>
-              ) : myAllocations.map((a) => (
+              ) : allocations.map((a) => (
                 <tr key={a.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
                   <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{a.id}</td>
                   <td className="px-5 py-3 font-medium text-card-foreground">{a.assetName}</td>
