@@ -3,6 +3,7 @@ import { Package, CheckCircle, ArrowRightLeft, Wrench, TrendingUp, TrendingDown,
 import { StatCard } from "@/components/StatCard";
 import { Asset, Allocation, MaintenanceRecord, MonthlyActivity, AllocationTrend } from "@/types/index";
 import { getAssetsAPI, getAllocationsAPI, getMaintenanceAPI, getMonthlyActivityAPI, getAllocationTrendAPI } from "@/services/api";
+import { sampleAssets, sampleAllocations, sampleMaintenance, sampleMonthlyActivity, sampleAllocationTrend } from "@/data/sampleData";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, AreaChart, Area,
@@ -28,19 +29,23 @@ export default function Dashboard() {
     const fetchAll = async () => {
       try {
         const [assetsData, allocData, maintData, activityData, trendData] = await Promise.all([
-          getAssetsAPI(),
-          getAllocationsAPI(),
-          getMaintenanceAPI(),
-          getMonthlyActivityAPI(),
-          getAllocationTrendAPI(),
+          getAssetsAPI().catch(() => []),
+          getAllocationsAPI().catch(() => []),
+          getMaintenanceAPI().catch(() => []),
+          getMonthlyActivityAPI().catch(() => []),
+          getAllocationTrendAPI().catch(() => []),
         ]);
-        setAssets(assetsData);
-        setAllocations(allocData);
-        setMaintenance(maintData);
-        setMonthlyActivity(activityData);
-        setAllocationTrend(trendData);
-      } catch (error) {
-        console.error("Dashboard fetch error:", error);
+        setAssets(assetsData.length > 0 ? assetsData : sampleAssets);
+        setAllocations(allocData.length > 0 ? allocData : sampleAllocations);
+        setMaintenance(maintData.length > 0 ? maintData : sampleMaintenance);
+        setMonthlyActivity(activityData.length > 0 ? activityData : sampleMonthlyActivity);
+        setAllocationTrend(trendData.length > 0 ? trendData : sampleAllocationTrend);
+      } catch {
+        setAssets(sampleAssets);
+        setAllocations(sampleAllocations);
+        setMaintenance(sampleMaintenance);
+        setMonthlyActivity(sampleMonthlyActivity);
+        setAllocationTrend(sampleAllocationTrend);
       } finally {
         setLoading(false);
       }
@@ -137,7 +142,7 @@ export default function Dashboard() {
 
         <div className="bg-card rounded-xl card-shadow-md border border-border/50 p-5">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingDown className="w-5 h-5 text-info" />
+            <TrendingDown className="w-5 h-5 text-primary" />
             <h2 className="font-semibold text-card-foreground">Allocation Trend</h2>
           </div>
           <ResponsiveContainer width="100%" height={260}>
