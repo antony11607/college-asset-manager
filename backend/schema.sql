@@ -79,3 +79,13 @@ INSERT INTO assets (id, name, category, purchase_date, status, location) VALUES
 ('AST-006', 'Oscilloscope DSO1102E', 'Lab Equipment', '2022-11-08', 'Available', 'Electronics Lab'),
 ('AST-007', 'Canon EOS R50', 'Camera', '2024-02-28', 'Available', 'Media Room'),
 ('AST-008', 'BenQ GW2780', 'Monitor', '2023-09-15', 'Available', 'Lab A');
+
+--Inser notifications
+CREATE TABLE notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    message TEXT,
+    type ENUM('request','approval','rejection'),
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
